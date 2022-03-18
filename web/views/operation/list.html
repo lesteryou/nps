@@ -1,0 +1,129 @@
+<div class="wrapper wrapper-content animated fadeInRight">
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5 langtag="page-operationlist"></h5>
+
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="content">
+                    {{if eq true .isAdmin}}
+                    <div class="table-responsive">
+                        <table id="taskList_table" class="table-striped table-hover"
+                               data-mobile-responsive="true"></table>
+                    </div>
+                </div>
+                {{end}}
+                <div class="ibox-content">
+                    <table id="table"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /*bootstrap table*/
+    $('#table').bootstrapTable({
+        method: 'post', // 服务器数据的请求方式 get or post
+        url: "{{.web_base_url}}/operation/list", // 服务器数据的加载地址
+        contentType: "application/x-www-form-urlencoded",
+        striped: true, // 设置为true会有隔行变色效果
+        search: true,
+        showHeader: true,
+        showColumns: true,
+        showRefresh: true,
+        pagination: true,//分页
+        sidePagination: 'server',//服务器端分页
+        pageNumber: 1,
+        pageList: [5, 10, 20, 50],//分页步进值
+        detailView: true,
+        smartDisplay: true, // 智能显示 pagination 和 cardview 等
+        onExpandRow: function () {
+            $('body').setLang('.detail-view');
+        },
+        onPostBody: function (data) {
+            if ($(this)[0].locale != undefined) $('body').setLang('#table');
+        },
+        detailFormatter: function (index, row, element) {
+            return '<b langtag="word-id"></b>: ' + row.Id + '&emsp;'
+                + '<b langtag="word-time"></b>: ' + row.Time + '&emsp;'
+                + '<b langtag="word-ip"></b>: ' + row.Ip + '&emsp;'
+                + '<b langtag="word-user"></b>: ' + row.User + '&emsp;'
+                + '<b langtag="word-operationtype"></b>: ' + row.Type + '&emsp;'
+                + '<b langtag="word-ua"></b>: ' + row.Ua + '&emsp;'
+                + '<b langtag="word-content"></b>: ' + row.Data + '&emsp;'
+        },
+        //表格的列
+        columns: [
+            {
+                field: 'Id',//域值
+                title: '<span langtag="word-id"></span>',//标题
+                halign: 'center',
+                visible: true,//false表示不显示
+                sortable: true,//启用排序
+            },
+            {
+                field: 'Time',//域值
+                title: '<span langtag="word-time"></span>',//标题
+                halign: 'center',
+                visible: true,//false表示不显示
+                sortable: true,//启用排序
+            },
+            {
+                field: 'Ip',//域值
+                title: '<span langtag="word-ip"></span>',//标题
+                halign: 'center',
+                visible: true,//false表示不显示
+                sortable: true,//启用排序
+            },
+
+            {
+                field: 'User',//域值
+                title: '<span langtag="word-user"></span>',//标题
+                halign: 'center',
+                visible: true//false表示不显示
+            },
+            {
+                field: 'Type',//域值
+                title: '<span langtag="word-operationtype"></span>',//标题
+                halign: 'center',
+                visible: true,//false表示不显示
+                sortable: true,//启用排序
+            },
+            {
+                field: 'Ua',//域值
+                title: '<span langtag="word-ua"></span>',//标题
+                halign: 'center',
+                visible: true,//false表示不显示
+                formatter:function (value, row, index) {
+                    if (value.length > 50) {
+                        return value.substring(0,50)+"..."
+                    }
+                    return value
+                }
+            },
+            {
+                field: 'Data',//域值
+                title: '<span langtag="word-content"></span>',//标题
+                halign: 'center',
+                visible: true,//false表示不显示
+                formatter:function (value, row, index) {
+                    if (value.length > 80) {
+                        return value.substring(0,80)+"..."
+                    }
+                    return value
+                }
+            },
+        ]
+    });
+</script>

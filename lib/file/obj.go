@@ -208,3 +208,14 @@ func (s *Target) GetRandomTarget() (string, error) {
 	s.nowIndex++
 	return s.TargetArr[s.nowIndex], nil
 }
+
+type Operation struct {
+	Id   int
+	Time string
+	User string
+	Ip   string
+	Type string
+	Ua   string
+	Data string
+	sync.RWMutex
+}

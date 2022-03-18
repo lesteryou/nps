@@ -458,3 +458,9 @@ func flowSession(m time.Duration) {
 		}
 	}
 }
+
+//Get operation list
+func GetOperationList(start, length int, search, sort, order string) (list []*file.Operation, cnt int) {
+	list, cnt = file.GetDb().GetOperationList(start, length, search, sort, order)
+	return
+}

@@ -5,6 +5,7 @@ import (
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/lib/rate"
 	"ehang.io/nps/server"
+	"encoding/json"
 	"github.com/astaxie/beego"
 )
 
@@ -69,6 +70,10 @@ func (s *ClientController) Add() {
 		if err := file.GetDb().NewClient(t); err != nil {
 			s.AjaxErr(err.Error())
 		}
+
+		dataByteArr, _ := json.Marshal(t)
+		file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Add client"))
+
 		s.AjaxOk("add success")
 	}
 }
@@ -143,6 +148,10 @@ func (s *ClientController) Edit() {
 				c.Rate = rate.NewRate(int64(2 << 23))
 				c.Rate.Start()
 			}
+
+			dataByteArr, _ := json.Marshal(c)
+			file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Edit Client"))
+
 			file.GetDb().JsonDb.StoreClientsToJsonFile()
 		}
 		s.AjaxOk("save success")
@@ -157,6 +166,10 @@ func (s *ClientController) ChangeStatus() {
 		if client.Status == false {
 			server.DelClientConnect(client.Id)
 		}
+
+		dataByteArr, _ := json.Marshal(client)
+		file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Change client status"))
+
 		s.AjaxOk("modified success")
 	}
 	s.AjaxErr("modified fail")
@@ -165,6 +178,13 @@ func (s *ClientController) ChangeStatus() {
 //删除客户端
 func (s *ClientController) Del() {
 	id := s.GetIntNoErr("id")
+
+	// Add an operation log
+	if client, err := file.GetDb().GetClient(id); err == nil {
+		dataByteArr, _ := json.Marshal(client)
+		file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Delete Client"))
+	}
+
 	if err := file.GetDb().DelClient(id); err != nil {
 		s.AjaxErr("delete error")
 	}

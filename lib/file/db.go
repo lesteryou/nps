@@ -29,6 +29,7 @@ func GetDb() *DbUtils {
 		jsonDb.LoadClientFromJsonFile()
 		jsonDb.LoadTaskFromJsonFile()
 		jsonDb.LoadHostFromJsonFile()
+		jsonDb.LoadOperationJsonFile()
 		Db = &DbUtils{JsonDb: jsonDb}
 	})
 	return Db
@@ -358,4 +359,32 @@ func (s *DbUtils) GetInfoByHost(host string, r *http.Request) (h *Host, err erro
 	}
 	err = errors.New("The host could not be parsed")
 	return
+}
+
+func (s *DbUtils) GetOperationList(start, length int, search, sort, order string) ([]*Operation, int) {
+	list := make([]*Operation, 0)
+	var cnt int
+	keys := GetMapKeys(s.JsonDb.Operations, true, sort, order)
+	for _, key := range keys {
+		if value, ok := s.JsonDb.Operations.Load(key); ok {
+			v := value.(*Operation)
+
+			if search != "" && !(v.Id == common.GetIntNoErrByStr(search) || strings.Contains(v.User, search) || strings.Contains(v.Ip, search) || strings.Contains(v.Type, search)) {
+				continue
+			}
+			cnt++
+			if start--; start < 0 {
+				if length--; length >= 0 {
+					list = append(list, v)
+				}
+			}
+		}
+	}
+	return list, cnt
+}
+
+// NewOperation Add an operation log
+func (s *DbUtils) NewOperation(o *Operation) {
+	s.JsonDb.Operations.Store(o.Id, o)
+	s.JsonDb.StoreOperationsToJsonFile()
 }

@@ -205,3 +205,21 @@ func (s *BaseController) CheckUserAuth() {
 		}
 	}
 }
+
+// SetOperation 封装操作记录对象
+func (s *BaseController) SetOperation(data string, operationType string) (o *file.Operation) {
+	username, ok := s.GetSession("username").(string)
+	if !ok {
+		username = "admin"
+	}
+	o = &file.Operation{
+		Id:   int(file.GetDb().JsonDb.GetOperationId()),
+		Time: time.Now().Format("2006-01-02 15:04:05"),
+		User: username,
+		Type: operationType,
+		Ua:   s.Ctx.Request.UserAgent(),
+		Ip:   s.Ctx.Request.RemoteAddr,
+		Data: data,
+	}
+	return o
+}

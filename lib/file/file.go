@@ -16,25 +16,29 @@ import (
 
 func NewJsonDb(runPath string) *JsonDb {
 	return &JsonDb{
-		RunPath:        runPath,
-		TaskFilePath:   filepath.Join(runPath, "conf", "tasks.json"),
-		HostFilePath:   filepath.Join(runPath, "conf", "hosts.json"),
-		ClientFilePath: filepath.Join(runPath, "conf", "clients.json"),
+		RunPath:           runPath,
+		TaskFilePath:      filepath.Join(runPath, "conf", "tasks.json"),
+		HostFilePath:      filepath.Join(runPath, "conf", "hosts.json"),
+		ClientFilePath:    filepath.Join(runPath, "conf", "clients.json"),
+		OperationFilePath: filepath.Join(runPath, "conf", "operations.json"),
 	}
 }
 
 type JsonDb struct {
-	Tasks            sync.Map
-	Hosts            sync.Map
-	HostsTmp         sync.Map
-	Clients          sync.Map
-	RunPath          string
-	ClientIncreaseId int32  //client increased id
-	TaskIncreaseId   int32  //task increased id
-	HostIncreaseId   int32  //host increased id
-	TaskFilePath     string //task file path
-	HostFilePath     string //host file path
-	ClientFilePath   string //client file path
+	Tasks               sync.Map
+	Hosts               sync.Map
+	HostsTmp            sync.Map
+	Clients             sync.Map
+	Operations          sync.Map
+	RunPath             string
+	ClientIncreaseId    int32  //client increased id
+	TaskIncreaseId      int32  //task increased id
+	HostIncreaseId      int32  //host increased id
+	OperationIncreaseId int32  //host increased id
+	TaskFilePath        string //task file path
+	HostFilePath        string //host file path
+	ClientFilePath      string //client file path
+	OperationFilePath   string //operation file path
 }
 
 func (s *JsonDb) LoadTaskFromJsonFile() {
@@ -91,6 +95,20 @@ func (s *JsonDb) LoadHostFromJsonFile() {
 	})
 }
 
+func (s *JsonDb) LoadOperationJsonFile() {
+	loadSyncMapFromFile(s.OperationFilePath, func(v string) {
+		post := new(Operation)
+		var err error
+		if err = json.Unmarshal([]byte(v), &post); err != nil {
+			return
+		}
+		s.Operations.Store(post.Id, post)
+		if post.Id > int(s.OperationIncreaseId) {
+			s.OperationIncreaseId = int32(post.Id)
+		}
+	})
+}
+
 func (s *JsonDb) GetClient(id int) (c *Client, err error) {
 	if v, ok := s.Clients.Load(id); ok {
 		c = v.(*Client)
@@ -124,6 +142,14 @@ func (s *JsonDb) StoreClientsToJsonFile() {
 	clientLock.Unlock()
 }
 
+var operationLock sync.Mutex
+
+func (s *JsonDb) StoreOperationsToJsonFile() {
+	operationLock.Lock()
+	storeSyncMapToFile(s.Operations, s.OperationFilePath)
+	operationLock.Unlock()
+}
+
 func (s *JsonDb) GetClientId() int32 {
 	return atomic.AddInt32(&s.ClientIncreaseId, 1)
 }
@@ -134,6 +160,10 @@ func (s *JsonDb) GetTaskId() int32 {
 
 func (s *JsonDb) GetHostId() int32 {
 	return atomic.AddInt32(&s.HostIncreaseId, 1)
+}
+
+func (s *JsonDb) GetOperationId() int32 {
+	return atomic.AddInt32(&s.OperationIncreaseId, 1)
 }
 
 func loadSyncMapFromFile(filePath string, f func(value string)) {
@@ -173,6 +203,66 @@ func storeSyncMapToFile(m sync.Map, filePath string) {
 			if obj.NoStore {
 				return true
 			}
+			b, err = json.Marshal(obj)
+		case *Operation:
+			obj := value.(*Operation)
+			b, err = json.Marshal(obj)
+		default:
+			return true
+		}
+		if err != nil {
+			return true
+		}
+		_, err = file.Write(b)
+		if err != nil {
+			panic(err)
+		}
+		_, err = file.Write([]byte("\n" + common.CONN_DATA_SEQ))
+		if err != nil {
+			panic(err)
+		}
+		return true
+	})
+	_ = file.Sync()
+	_ = file.Close()
+	// must close file first, then rename it
+	err = os.Rename(filePath+".tmp", filePath)
+	if err != nil {
+		logs.Error(err, "store to file err, data will lost")
+	}
+	// replace the file, maybe provides atomic operation
+}
+
+func storeSyncMapAppendToFile(m sync.Map, filePath string) {
+	file, err := os.Create(filePath + ".tmp")
+	// first create a temporary file to store
+	if err != nil {
+		panic(err)
+	}
+	m.Range(func(key, value interface{}) bool {
+		var b []byte
+		var err error
+		switch value.(type) {
+		case *Tunnel:
+			obj := value.(*Tunnel)
+			if obj.NoStore {
+				return true
+			}
+			b, err = json.Marshal(obj)
+		case *Host:
+			obj := value.(*Host)
+			if obj.NoStore {
+				return true
+			}
+			b, err = json.Marshal(obj)
+		case *Client:
+			obj := value.(*Client)
+			if obj.NoStore {
+				return true
+			}
+			b, err = json.Marshal(obj)
+		case *Operation:
+			obj := value.(*Operation)
 			b, err = json.Marshal(obj)
 		default:
 			return true

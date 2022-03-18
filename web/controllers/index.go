@@ -4,6 +4,7 @@ import (
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
 	"ehang.io/nps/server/tool"
+	"encoding/json"
 
 	"github.com/astaxie/beego"
 )
@@ -117,6 +118,9 @@ func (s *IndexController) Add() {
 		}
 		if err := file.GetDb().NewTask(t); err != nil {
 			s.AjaxErr(err.Error())
+		} else {
+			dataByteArr, _ := json.Marshal(t)
+			file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Add "+s.getEscapeString("type")))
 		}
 		if err := server.AddTask(t); err != nil {
 			s.AjaxErr(err.Error())
@@ -174,6 +178,10 @@ func (s *IndexController) Edit() {
 			t.Remark = s.getEscapeString("remark")
 			t.Target.LocalProxy = s.GetBoolNoErr("local_proxy")
 			file.GetDb().UpdateTask(t)
+
+			dataByteArr, _ := json.Marshal(t)
+			file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Edit "+t.Mode))
+
 			server.StopServer(t.Id)
 			server.StartTask(t.Id)
 		}
@@ -186,11 +194,25 @@ func (s *IndexController) Stop() {
 	if err := server.StopServer(id); err != nil {
 		s.AjaxErr("stop error")
 	}
+
+	if t, err := file.GetDb().GetTask(id); err == nil {
+		t.Status = false
+		dataByteArr, _ := json.Marshal(t)
+		file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Change "+t.Mode+" status: stop."))
+	}
+
 	s.AjaxOk("stop success")
 }
 
 func (s *IndexController) Del() {
 	id := s.GetIntNoErr("id")
+
+	if t, err := file.GetDb().GetTask(id); err == nil {
+		t.Status = false
+		dataByteArr, _ := json.Marshal(t)
+		file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Delete "+t.Mode))
+	}
+
 	if err := server.DelTask(id); err != nil {
 		s.AjaxErr("delete error")
 	}
@@ -201,6 +223,10 @@ func (s *IndexController) Start() {
 	id := s.GetIntNoErr("id")
 	if err := server.StartTask(id); err != nil {
 		s.AjaxErr("start error")
+	}
+	if t, err := file.GetDb().GetTask(id); err == nil {
+		dataByteArr, _ := json.Marshal(t)
+		file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Change "+t.Mode+" status: start."))
 	}
 	s.AjaxOk("start success")
 }
@@ -235,6 +261,12 @@ func (s *IndexController) GetHost() {
 
 func (s *IndexController) DelHost() {
 	id := s.GetIntNoErr("id")
+
+	if h, err := file.GetDb().GetHostById(id); err == nil {
+		dataByteArr, _ := json.Marshal(h)
+		file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Delete host"))
+	}
+
 	if err := file.GetDb().DelHost(id); err != nil {
 		s.AjaxErr("delete error")
 	}
@@ -268,6 +300,10 @@ func (s *IndexController) AddHost() {
 		if err := file.GetDb().NewHost(h); err != nil {
 			s.AjaxErr("add fail" + err.Error())
 		}
+
+		dataByteArr, _ := json.Marshal(h)
+		file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Add host"))
+
 		s.AjaxOk("add success")
 	}
 }
@@ -313,6 +349,9 @@ func (s *IndexController) EditHost() {
 			h.CertFilePath = s.getEscapeString("cert_file_path")
 			h.Target.LocalProxy = s.GetBoolNoErr("local_proxy")
 			file.GetDb().JsonDb.StoreHostToJsonFile()
+
+			dataByteArr, _ := json.Marshal(h)
+			file.GetDb().NewOperation(s.SetOperation(string(dataByteArr), "Edit host"))
 		}
 		s.AjaxOk("modified success")
 	}

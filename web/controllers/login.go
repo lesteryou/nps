@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"math/rand"
 	"net"
 	"sync"
@@ -38,6 +39,7 @@ func (self *LoginController) Verify() {
 	username := self.GetString("username")
 	password := self.GetString("password")
 	if self.doLogin(username, password, true) {
+		file.GetDb().NewOperation(self.SetOperation("Login", "Login"))
 		self.Data["json"] = map[string]interface{}{"status": 1, "msg": "login success"}
 	} else {
 		self.Data["json"] = map[string]interface{}{"status": 0, "msg": "username or password incorrect"}
@@ -131,6 +133,8 @@ func (self *LoginController) Register() {
 		if err := file.GetDb().NewClient(t); err != nil {
 			self.Data["json"] = map[string]interface{}{"status": 0, "msg": err.Error()}
 		} else {
+			dataByteArr, _ := json.Marshal(t)
+			file.GetDb().NewOperation(self.SetOperation(string(dataByteArr), "Register client"))
 			self.Data["json"] = map[string]interface{}{"status": 1, "msg": "register success"}
 		}
 		self.ServeJSON()
@@ -139,6 +143,7 @@ func (self *LoginController) Register() {
 
 func (self *LoginController) Out() {
 	self.SetSession("auth", false)
+	file.GetDb().NewOperation(self.SetOperation("Logout", "Logout"))
 	self.Redirect(beego.AppConfig.String("web_base_url")+"/login/index", 302)
 }
 
@@ -154,4 +159,22 @@ func clearIprecord() {
 			return true
 		})
 	}
+}
+
+// SetOperation 封装操作记录对象
+func (l *LoginController) SetOperation(data string, operationType string) (o *file.Operation) {
+	username, ok := l.GetSession("username").(string)
+	if !ok {
+		username = "admin"
+	}
+	o = &file.Operation{
+		Id:   int(file.GetDb().JsonDb.GetOperationId()),
+		Time: time.Now().Format("2006-01-02 15:04:05"),
+		User: username,
+		Type: operationType,
+		Ua:   l.Ctx.Request.UserAgent(),
+		Ip:   l.Ctx.Request.RemoteAddr,
+		Data: data,
+	}
+	return o
 }

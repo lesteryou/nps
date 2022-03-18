@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"ehang.io/nps/lib/crypt"
 )
@@ -466,4 +467,10 @@ func GetServerIpByClientIp(clientIp net.IP) string {
 
 func PrintVersion() {
 	fmt.Printf("Version: %s\nCore version: %s\nSame core version of client and server can connect each other\n", version.VERSION, version.GetVersion())
+}
+
+func GetNowTimeStr() {
+	timeObj := time.Now()
+	timeObj.Format("2006-01-02 15:04:05")
+
 }
